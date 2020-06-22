@@ -145,15 +145,15 @@ func (ld *LogSyncEngine) ApproximateRemainingEntries() int {
 	return len(ld.entryChan)
 }
 
-func (ld *LogSyncEngine) ApproximateMostRecentEntryTimestamp() time.Time {
+func (ld *LogSyncEngine) ApproximateMostRecentUpdateTimestamp() time.Time {
 	var mostRecent *storage.CertificateLog
 	for _, log := range ld.database.GetAllLogStates() {
-		if mostRecent == nil || log.LastEntryTime.After(mostRecent.LastEntryTime) {
+		if mostRecent == nil || log.LastUpdateTime.After(mostRecent.LastUpdateTime) {
 			mostRecent = log
 		}
 	}
 	glog.V(4).Infof("Most recently updated log was %+v", mostRecent)
-	return mostRecent.LastEntryTime
+	return mostRecent.LastUpdateTime
 }
 
 func (ld *LogSyncEngine) Stop() {
@@ -352,6 +352,7 @@ func (lw *LogWorker) saveState(index uint64, entryTime *time.Time) {
 	if entryTime != nil {
 		lw.LogState.LastEntryTime = *entryTime
 	}
+	lw.LogState.LastUpdateTime = time.Now()
 
 	defer metrics.MeasureSince([]string{"LogWorker", "saveState"}, time.Now())
 	saveErr := lw.Database.SaveLogState(lw.LogState)
@@ -537,16 +538,16 @@ func main() {
 
 		healthHandler := http.NewServeMux()
 		healthHandler.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-			duration := time.Since(syncEngine.ApproximateMostRecentEntryTimestamp())
+			duration := time.Since(syncEngine.ApproximateMostRecentUpdateTimestamp())
 			if duration.Minutes() > 10 {
 				w.WriteHeader(500)
-				_, err := w.Write([]byte(fmt.Sprintf("error: %v since last entry", duration)))
+				_, err := w.Write([]byte(fmt.Sprintf("error: %v since last update", duration)))
 				if err != nil {
 					glog.Warningf("Couldn't return poor health status: %+v", err)
 				}
 			} else {
 				w.WriteHeader(200)
-				_, err := w.Write([]byte(fmt.Sprintf("ok: %v since last entry", duration)))
+				_, err := w.Write([]byte(fmt.Sprintf("ok: %v since last update", duration)))
 				if err != nil {
 					glog.Warningf("Couldn't return ok health status: %+v", err)
 				}
