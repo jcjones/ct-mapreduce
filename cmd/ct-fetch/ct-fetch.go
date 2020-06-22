@@ -8,6 +8,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"math/rand"
 	"net/http"
@@ -142,6 +143,17 @@ func (ld *LogSyncEngine) SyncLog(logURL string) error {
 
 func (ld *LogSyncEngine) ApproximateRemainingEntries() int {
 	return len(ld.entryChan)
+}
+
+func (ld *LogSyncEngine) ApproximateMostRecentEntryTimestamp() time.Time {
+	var mostRecent *storage.CertificateLog
+	for _, log := range ld.database.GetAllLogStates() {
+		if mostRecent == nil || log.LastEntryTime.After(mostRecent.LastEntryTime) {
+			mostRecent = log
+		}
+	}
+	glog.V(4).Infof("Most recently updated log was %+v", mostRecent)
+	return mostRecent.LastEntryTime
 }
 
 func (ld *LogSyncEngine) Stop() {
@@ -523,6 +535,35 @@ func main() {
 			}()
 		}
 
+		healthHandler := http.NewServeMux()
+		healthHandler.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+			duration := time.Since(syncEngine.ApproximateMostRecentEntryTimestamp())
+			if duration.Minutes() > 10 {
+				w.WriteHeader(500)
+				_, err := w.Write([]byte(fmt.Sprintf("error: %v since last entry", duration)))
+				if err != nil {
+					glog.Warningf("Couldn't return poor health status: %+v", err)
+				}
+			} else {
+				w.WriteHeader(200)
+				_, err := w.Write([]byte(fmt.Sprintf("ok: %v since last entry", duration)))
+				if err != nil {
+					glog.Warningf("Couldn't return ok health status: %+v", err)
+				}
+			}
+		})
+
+		healthServer := &http.Server{
+			Handler: healthHandler,
+			Addr:    ":8080",
+		}
+		go func() {
+			err := healthServer.ListenAndServe()
+			if err != nil {
+				glog.Infof("HTTP server result: %v", err)
+			}
+		}()
+
 		syncEngine.DownloaderWaitGroup.Wait() // Wait for downloaders to stop
 		go func() {
 			for {
@@ -534,6 +575,10 @@ func main() {
 		syncEngine.Stop()                 // Stop workers
 		syncEngine.ThreadWaitGroup.Wait() // Wait for workers to stop
 		syncEngine.Cleanup()              // Ensure cache is coherent
+
+		if err := healthServer.Shutdown(ctx); err != nil {
+			glog.Infof("HTTP server shutdown error: %v", err)
+		}
 		glog.Flush()
 
 		os.Exit(0)

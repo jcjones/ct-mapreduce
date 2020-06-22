@@ -70,6 +70,7 @@ type CertDatabase interface {
 	Cleanup() error
 	SaveLogState(aLogObj *CertificateLog) error
 	GetLogState(url *url.URL) (*CertificateLog, error)
+	GetAllLogStates() []*CertificateLog
 	Store(aCert *x509.Certificate, aIssuer *x509.Certificate, aURL string,
 		aEntryId int64) error
 	ListExpirationDates(aNotBefore time.Time) ([]ExpDate, error)
@@ -98,6 +99,7 @@ type RemoteCache interface {
 	KeysToChan(pattern string, c chan<- string) error
 	StoreLogState(aLogObj *CertificateLog) error
 	LoadLogState(aLogUrl string) (*CertificateLog, error)
+	GetAllLogStates() ([]*CertificateLog, error)
 }
 
 type Issuer struct {
