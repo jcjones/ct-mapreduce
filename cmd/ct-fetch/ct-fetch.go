@@ -539,15 +539,16 @@ func main() {
 		healthHandler := http.NewServeMux()
 		healthHandler.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 			duration := time.Since(syncEngine.ApproximateMostRecentUpdateTimestamp())
-			if duration.Minutes() > 10 {
+			evaluationTime := 2 * pollingDelayMean
+			if duration > evaluationTime {
 				w.WriteHeader(500)
-				_, err := w.Write([]byte(fmt.Sprintf("error: %v since last update", duration)))
+				_, err := w.Write([]byte(fmt.Sprintf("error: %v since last update, which is longer than 2 * pollingDelayMean (%v)", duration, evaluationTime)))
 				if err != nil {
 					glog.Warningf("Couldn't return poor health status: %+v", err)
 				}
 			} else {
 				w.WriteHeader(200)
-				_, err := w.Write([]byte(fmt.Sprintf("ok: %v since last update", duration)))
+				_, err := w.Write([]byte(fmt.Sprintf("ok: %v since last update, which is shorter than 2 * pollingDelayMean (%v)", duration, evaluationTime)))
 				if err != nil {
 					glog.Warningf("Couldn't return ok health status: %+v", err)
 				}
