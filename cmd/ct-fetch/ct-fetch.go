@@ -557,7 +557,7 @@ func main() {
 
 		healthServer := &http.Server{
 			Handler: healthHandler,
-			Addr:    ":8080",
+			Addr:    *ctconfig.HealthAddr,
 		}
 		go func() {
 			err := healthServer.ListenAndServe()
