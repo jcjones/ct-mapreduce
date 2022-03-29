@@ -6,7 +6,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"net/url"
-	"strconv"
+	// "strconv"
 	"strings"
 	"sync"
 	"time"
@@ -165,9 +165,9 @@ func (db *FilesystemDatabase) Store(aCert *x509.Certificate, aIssuer *x509.Certi
 	defer ctxCancel()
 
 	headers := make(map[string]string)
-	headers["Log"] = aLogURL
-	headers["Recorded-at"] = time.Now().Format(time.RFC3339)
-	headers["Entry-id"] = strconv.FormatInt(aEntryId, 10)
+	// headers["Log"] = aLogURL
+	// headers["Recorded-at"] = time.Now().Format(time.RFC3339)
+	// headers["Entry-id"] = strconv.FormatInt(aEntryId, 10)
 	pemblock := pem.Block{
 		Type:    "CERTIFICATE",
 		Headers: headers,

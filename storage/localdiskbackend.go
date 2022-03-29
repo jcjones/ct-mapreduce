@@ -191,10 +191,11 @@ func (db *LocalDiskBackend) AllocateExpDateAndIssuer(_ context.Context, expDate 
 	return makeDirectoryIfNotExist(path)
 }
 
-func (db *LocalDiskBackend) StoreCertificatePEM(_ context.Context, serial Serial, expDate ExpDate,
+func (db *LocalDiskBackend) StoreCertificatePEM(ctx context.Context, serial Serial, expDate ExpDate,
 	issuer Issuer, b []byte) error {
-	glog.Warningf("Need to store into " + kSuffixCertificates)
-	return fmt.Errorf("Unimplemented")
+	db.AllocateExpDateAndIssuer(ctx, expDate, issuer)
+	path := filepath.Join(db.rootPath, expDate.ID(), issuer.ID(), serial.ID())
+	return db.store(path, b)
 }
 
 func (db *LocalDiskBackend) StoreLogState(_ context.Context, log *CertificateLog) error {

@@ -34,14 +34,14 @@ func GetConfiguredStorage(ctx context.Context, ctconfig *config.CTConfig) (stora
 	}
 
 	if hasLocalDiskConfig {
-		glog.Fatalf("Local Disk Backend currently disabled")
+		backend = storage.NewLocalDiskBackend(0777, *ctconfig.CertPath)
 	} else {
 		backend = storage.NewNoopBackend()
+	}
 
-		storageDB, err = storage.NewFilesystemDatabase(backend, remoteCache)
-		if err != nil {
-			glog.Fatalf("Unable to construct cache-only DB: %v", err)
-		}
+	storageDB, err = storage.NewFilesystemDatabase(backend, remoteCache)
+	if err != nil {
+		glog.Fatalf("Unable to construct cache-only DB: %v", err)
 	}
 
 	return storageDB, remoteCache, backend
